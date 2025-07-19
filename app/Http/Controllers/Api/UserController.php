@@ -9,6 +9,15 @@ use Illuminate\Support\Facades\Auth;
 
 class UserController extends Controller
 {
+    /**
+     * Tujuan: Fungsi ini digunakan untuk mengikuti (follow) pengguna lain.
+     * Cara Kerja:
+     * - Mencari pengguna yang ingin diikuti berdasarkan username. Jika tidak ditemukan, akan mengembalikan pesan error.
+     * - Memeriksa apakah pengguna yang sedang login mencoba mengikuti akunnya sendiri. Jika iya, akan mengembalikan pesan error.
+     * - Memeriksa apakah pengguna yang sedang login sudah mengikuti pengguna tersebut. Jika iya, akan mengembalikan pesan error.
+     * - Jika pengguna yang ingin diikuti memiliki akun private (pribadi), permintaan mengikuti akan disimpan dengan status requested (diminta), yang berarti perlu persetujuan dari pengguna yang diikuti.
+     * - Jika pengguna yang ingin diikuti memiliki akun public (publik), pengguna yang sedang login akan langsung mengikuti dan statusnya menjadi following (mengikuti).
+     */
     public function follow(Request $request, $username)
     {
         $userToFollow = User::where('username', $username)->first();
@@ -40,6 +49,14 @@ class UserController extends Controller
         return response()->json(['message' => 'Follow success', 'status' => 'following']);
     }
 
+    /**
+     * Tujuan: Fungsi ini digunakan untuk berhenti mengikuti (unfollow) pengguna lain.
+     * Cara Kerja:
+     * - Mencari pengguna yang ingin berhenti diikuti berdasarkan username. Jika tidak ditemukan, akan mengembalikan pesan error.
+     * - Memeriksa apakah pengguna yang sedang login memang sedang mengikuti pengguna tersebut. Jika tidak, akan mengembalikan pesan error.
+     * - Jika pengguna yang sedang login memang mengikuti, hubungan mengikuti akan dihapus.
+     * - Mengembalikan respons sukses tanpa konten (status 204 No Content).
+     */
     public function unfollow(Request $request, $username)
     {
         $userToUnfollow = User::where('username', $username)->first();
@@ -62,6 +79,13 @@ class UserController extends Controller
         return response()->json(null, 204);
     }
 
+    /**
+     * Tujuan: Fungsi ini untuk mendapatkan daftar pengguna yang sedang diikuti oleh pengguna yang sedang login.
+     * Cara Kerja:
+     * - Mengambil semua pengguna yang diikuti oleh pengguna yang sedang login.
+     * - Memetakan data ini ke dalam format yang lebih rapi, termasuk id, full_name, username, bio, status private, waktu mengikuti (created_at), dan apakah permintaan mengikuti masih is_requested (status is_accepted adalah 0).
+     * - Mengembalikan daftar ini sebagai respons JSON.
+     */
     public function getFollowing(Request $request)
     {
         /** @var \App\Models\User $user */
@@ -83,6 +107,15 @@ class UserController extends Controller
         return response()->json(['following' => $following_data]);
     }
 
+    /**
+     * Tujuan: Fungsi ini digunakan untuk menerima permintaan mengikuti dari pengguna lain.
+     * Cara Kerja:
+     * - Mencari pengguna yang permintaannya ingin diterima berdasarkan username. Jika tidak ditemukan, akan mengembalikan pesan error.
+     * - Memeriksa apakah pengguna tersebut benar-benar mengirim permintaan mengikuti kepada pengguna yang sedang login. Jika tidak, akan mengembalikan pesan error.
+     * - Memeriksa apakah permintaan mengikuti sudah diterima sebelumnya. Jika iya, akan mengembalikan pesan error.
+     * - Jika semua kondisi terpenuhi, status permintaan mengikuti akan diubah menjadi accepted (diterima).
+     * - Mengembalikan pesan sukses.
+     */
     public function acceptFollowRequest(Request $request, $username)
     {
         $userToAccept = User::where('username', $username)->first();
@@ -109,6 +142,14 @@ class UserController extends Controller
         return response()->json(['message' => 'Follow request accepted']);
     }
 
+    /**
+     * Tujuan: Fungsi ini untuk mendapatkan daftar pengikut (followers) dari suatu pengguna.
+     * Cara Kerja:
+     * - Mencari pengguna berdasarkan username. Jika tidak ditemukan, akan mengembalikan pesan error.
+     * - Mengambil semua pengikut dari pengguna tersebut.
+     * - Memetakan data ini ke dalam format yang rapi, termasuk id, full_name, username, bio, status private, waktu mengikuti (created_at), dan apakah permintaan mengikuti masih is_requested (status is_accepted adalah 0).
+     * - Mengembalikan daftar ini sebagai respons JSON.
+     */
     public function getFollowers(Request $request, $username)
     {
         $user = User::where('username', $username)->first();
@@ -134,6 +175,14 @@ class UserController extends Controller
         return response()->json(['followers' => $followers_data]);
     }
 
+    /**
+     * Tujuan: Fungsi ini untuk mendapatkan daftar semua pengguna yang belum diikuti oleh pengguna yang sedang login.
+     * Cara Kerja:
+     * - Mengambil ID dari semua pengguna yang sedang diikuti oleh pengguna yang sedang login.
+     * - Mencari semua pengguna lain yang ID-nya tidak ada dalam daftar yang sedang diikuti dan bukan akun pengguna yang sedang login itu sendiri.
+     * - Memetakan data pengguna ini ke dalam format yang rapi.
+     * - Mengembalikan daftar ini sebagai respons JSON.
+     */
     public function getAllUsers(Request $request)
     {
         /** @var \App\Models\User $user */
@@ -156,6 +205,19 @@ class UserController extends Controller
         return response()->json(['users' => $users_data]);
     }
 
+    /**
+     * Tujuan: Fungsi ini untuk mendapatkan detail profil lengkap dari pengguna tertentu, termasuk status mengikuti dan jumlah postingan/pengikut/mengikuti.
+     * Cara Kerja:
+     * - Mencari pengguna berdasarkan username dan menghitung jumlah posts, followers, dan following mereka. Jika tidak ditemukan, akan mengembalikan pesan error.
+     * - Menentukan status mengikuti antara pengguna yang sedang login dengan pengguna yang detailnya diminta (bisa not-following, following, atau requested).
+     * - Membuat objek data pengguna yang berisi detail profil, status akun (is_your_account), status mengikuti (following_status), dan jumlah followers, following, serta posts.
+     * - Menentukan apakah pengguna yang sedang login memiliki izin untuk melihat postingan pengguna yang detailnya diminta. Izin diberikan jika:
+     *   - Itu adalah akun sendiri.
+     *   - Akun tersebut tidak private.
+     *   - Sudah following atau requested akun tersebut.
+     * - Jika izin diberikan, postingan pengguna tersebut (beserta lampirannya) akan dimuat dan ditambahkan ke data pengguna.
+     * - Mengembalikan data detail pengguna sebagai respons JSON.
+     */
     public function getUserDetail(Request $request, $username)
     {
         $user = User::where('username', $username)->withCount(['posts', 'followers', 'following'])->first();
