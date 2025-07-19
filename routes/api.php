@@ -19,7 +19,7 @@ use App\Http\Controllers\Api\AuthController;
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::get('/login', [AuthController::class, 'index'])->name('login')->middleware('guest');
-Route::delete('/logout', [AuthController::class, 'logout']);
+Route::delete('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
 Route::resource('v1/post', PostController::class)->middleware('auth:sanctum');
 
 Route::middleware('auth:sanctum')->group(function () {

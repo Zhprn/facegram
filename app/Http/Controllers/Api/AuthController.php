@@ -19,6 +19,7 @@ class AuthController extends Controller
             'username' => 'required|string|max:255|unique:users',
             'password' => 'required|string|min:6',
             'bio' => 'required|string',
+            'is_private' => 'boolean',
         ]);
 
         if ($validator->fails()) {
@@ -33,6 +34,7 @@ class AuthController extends Controller
             'username' => $request->username,
             'password' => Hash::make($request->password),
             'bio' => $request->bio,
+            'is_private' => $request->is_private ?? 0,
         ]);
 
         $token = $user->createToken('auth_token')->plainTextToken;
@@ -78,25 +80,13 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-        $token = $request->bearerToken();
-
-        if (!$token) {
-            return response()->json(['error' => 'Token not provided'], 400);
-        }
-
-        $accessToken = PersonalAccessToken::findToken($token);
-
-        if (!$accessToken) {
-            return response()->json(['error' => 'Anauthenticated.'], 401);
-        }
-
-        // Revoke token
-        $accessToken->delete();
+        $request->user()->currentAccessToken()->delete();
 
         return response()->json(['message' => 'Logout success']);
     }
 
-    public function index() {
+    public function index()
+    {
         return response()->json([
             'message' => 'Anauthenticated.'
         ], 401);

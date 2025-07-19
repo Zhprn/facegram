@@ -172,7 +172,16 @@ class UserController extends Controller
             'posts_count' => $user->posts_count,
         ];
 
-        if (!$user->is_private || $following_status === 'following' || $user->id === $authUser->id) {
+        $canViewPosts = false;
+        if ($user->id === $authUser->id) {
+            $canViewPosts = true;
+        } elseif (!$user->is_private) {
+            $canViewPosts = true;
+        } elseif ($following_status === 'following') {
+            $canViewPosts = true;
+        }
+
+        if ($canViewPosts) {
             $user->load('posts.attachments');
             $user_data['posts'] = $user->posts;
         }
