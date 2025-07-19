@@ -17,7 +17,8 @@ class UserController extends Controller
             return response()->json(['message' => 'User not found'], 404);
         }
 
-        $user = Auth::user();
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
 
         if ($user->id === $userToFollow->id) {
             return response()->json(['message' => 'You are not allowed to follow yourself'], 422);
@@ -47,7 +48,8 @@ class UserController extends Controller
             return response()->json(['message' => 'User not found'], 404);
         }
 
-        $user = Auth::user();
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
 
         $isFollowing = $user->following()->where('users.id', $userToUnfollow->id)->exists();
 
@@ -62,7 +64,8 @@ class UserController extends Controller
 
     public function getFollowing(Request $request)
     {
-        $user = Auth::user();
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
         $following = $user->following()->get();
 
         $following_data = $following->map(function ($followed_user) {
@@ -88,7 +91,8 @@ class UserController extends Controller
             return response()->json(['message' => 'User not found'], 404);
         }
 
-        $user = Auth::user();
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
 
         $follow = $user->followers()->where('users.id', $userToAccept->id)->first();
 
@@ -113,7 +117,7 @@ class UserController extends Controller
             return response()->json(['message' => 'User not found'], 404);
         }
 
-        $followers = $user->followers()->wherePivot('is_accepted', 1)->get();
+        $followers = $user->followers()->get();
 
         $followers_data = $followers->map(function ($follower) {
             return [
@@ -123,6 +127,7 @@ class UserController extends Controller
                 'bio' => $follower->bio,
                 'is_private' => $follower->is_private,
                 'created_at' => $follower->pivot->created_at->toDateTimeString(),
+                'is_requested' => $follower->pivot->is_accepted == 0,
             ];
         });
 
@@ -131,11 +136,24 @@ class UserController extends Controller
 
     public function getAllUsers(Request $request)
     {
-        $user = Auth::user();
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
         $followingIds = $user->following()->pluck('users.id');
         $users = User::whereNotIn('id', $followingIds)->where('id', '!=', $user->id)->get();
 
-        return response()->json(['users' => $users]);
+        $users_data = $users->map(function ($user) {
+            return [
+                'id' => $user->id,
+                'full_name' => $user->full_name,
+                'username' => $user->username,
+                'bio' => $user->bio,
+                'is_private' => $user->is_private,
+                'created_at' => $user->created_at,
+                'updated_at' => $user->updated_at,
+            ];
+        });
+
+        return response()->json(['users' => $users_data]);
     }
 
     public function getUserDetail(Request $request, $username)
@@ -146,7 +164,8 @@ class UserController extends Controller
             return response()->json(['message' => 'User not found'], 404);
         }
 
-        $authUser = Auth::user();
+        /** @var \App\Models\User $authUser */
+        $authUser = auth()->user();
         $following_status = 'not-following';
 
         if ($authUser->following()->where('users.id', $user->id)->exists()) {
