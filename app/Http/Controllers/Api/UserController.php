@@ -196,7 +196,7 @@ class UserController extends Controller
             $canViewPosts = true;
         } elseif (!$user->is_private) {
             $canViewPosts = true;
-        } elseif ($following_status === 'following') {
+        } elseif ($following_status === 'following' || $following_status === 'requested') {
             $canViewPosts = true;
         }
 
