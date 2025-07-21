@@ -27,11 +27,9 @@ class PostController extends Controller
         $data = Post::with('attachments', 'user')->paginate($perPage);
 
         return response()->json([
-            'posts' => $data->items(),
             'page' => $data->currentPage(),
             'size' => $data->perPage(),
-            'total_pages' => $data->lastPage(),
-            'total_posts' => $data->total(),
+            'posts' => $data->items(),
         ]);
     }
     /**
