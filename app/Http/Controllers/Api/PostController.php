@@ -21,10 +21,18 @@ class PostController extends Controller
      * - Setiap postingan akan menyertakan data lampiran (attachments) dan informasi pengguna (user) yang membuat postingan.
      * - Mengembalikan data postingan dalam format JSON.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $data = Post::with('attachments', 'user')->get();
-        return response()->json($data);
+        $perPage = $request->input('size', 10); // Default to 10 items per page
+        $data = Post::with('attachments', 'user')->paginate($perPage);
+
+        return response()->json([
+            'posts' => $data->items(),
+            'page' => $data->currentPage(),
+            'size' => $data->perPage(),
+            'total_pages' => $data->lastPage(),
+            'total_posts' => $data->total(),
+        ]);
     }
     /**
      * Show the form for creating a new resource.
